@@ -25,7 +25,8 @@ void setup() {
   imgMine     = loadImage("mine.png");
   imgFlag     = loadImage("flag.png");
   font        = loadFont("font.vlw");
-
+  
+  textAlign(CENTER, CENTER);
   textFont(font, 18);
   noStroke();
 }
@@ -47,7 +48,6 @@ void messageBox(String message, color c) {
   fill(c);
   rect(0, 0, width, height);
   fill(255);
-  textAlign(CENTER);
   text(message, width / 2, height / 2);
 }
 
@@ -105,7 +105,7 @@ class Cell {
             fill(75);
             break;
         }
-        text(nMines, 12, 22);
+        text(nMines, CELLSIZE / 2, CELLSIZE / 2);
       }
     } else {
       image(imgNormal, 0, 0);
