@@ -122,13 +122,13 @@ class Cell {
   }
 
   color[] colors = { color(0   , 0   , 255) ,   // blue
-                     color(0   , 200 , 0)   ,   // green
-                     color(255 , 0   , 0)   ,   // red
+                     color(0   , 200 , 0  ) ,   // green
+                     color(255 , 0   , 0  ) ,   // red
                      color(0   , 0   , 150) ,   // dark blue
-                     color(165 , 40  , 40)  ,   // brown
+                     color(165 , 40  , 40 ) ,   // brown
                      color(0   , 255 , 255) ,   // cyan
                      color(0   , 0   , 0  ) ,   // black
-                     color(75  , 75  , 75) };   // gray
+                     color(75  , 75  , 75 ) };  // gray
 
   void drawCell(boolean isShowingMines) {
     pushMatrix();
@@ -147,6 +147,7 @@ class Cell {
         text(nMines, CELLSIZE / 2, CELLSIZE / 2);
       }
     } else {
+
       // draw normal tile
       image(imgNormal, 0, 0);
 
@@ -192,6 +193,7 @@ class Board {
     int mines = 0;
 
     while(mines < mineCount) {
+
       // pick a random grid spot
       cell = cells[(int)random(boardSize)][(int)random(boardSize)];
 
@@ -280,6 +282,7 @@ class Board {
     queue.add(zero);
 
     while (queue.size() > 0) {
+
       // pop the first cell from the queue and use it as the current cell
       curCell = queue.get(0);
       queue.remove(0);
