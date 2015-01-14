@@ -11,7 +11,7 @@
 
 int GRIDWIDTH  = 20;
 int GRIDHEIGHT = 16;
-int MINES      = 70;
+int MINES      = 50;
 int CELLSIZE   = 32;  // tied to image sizes, don't change
 
 PImage imgNormal, imgRevealed, imgMine, imgFlag;
@@ -150,7 +150,6 @@ class Cell {
     // draw inset tile if revealed
     if (revealed) {
       image(imgRevealed, 0, 0);
-      fill(0, 0, 255);
 
       // print number of mines in middle of non-zero cells
       if (adjMines > 0) {
@@ -181,17 +180,19 @@ class Cell {
 
 class Board {
   Cell[][] cells;
-  int boardWidth, boardHeight, mineCount;
+  int boardWidth, boardHeight, mines, flags;
   boolean firstClick     = true;
   boolean gameOver       = false;
   boolean gameWon        = false;
   boolean isShowingMines = false;
+  int startMillis = 0;
+  float time = 0;
 
-  Board(int boardWidth, int boardHeight, int mineCount) {
+  Board(int boardWidth, int boardHeight, int mines) {
     this.cells       = new Cell[boardHeight][boardWidth];
     this.boardWidth  = boardWidth;
     this.boardHeight = boardHeight;
-    this.mineCount   = mineCount;
+    this.mines       = mines;
 
     // create grid of cells
     for (int row = 0; row < boardHeight; row++) {
@@ -220,9 +221,9 @@ class Board {
   // randomly disperse mines on board
   void placeMines(Cell clickedCell) {
     Cell cell;
-    int mines = 0;
+    int count = 0;
 
-    while(mines < mineCount) {
+    while(count < mines) {
 
       // pick a random grid spot
       cell = cells[(int)random(boardHeight)][(int)random(boardWidth)];
@@ -230,7 +231,7 @@ class Board {
       // if it's not already a mine and not the provided cell, set a mine
       if (!cell.isMine() && cell != clickedCell) {
         cell.setMine();
-        mines++;
+        count++;
       }
     }
 
@@ -257,6 +258,7 @@ class Board {
       if (firstClick) {
         placeMines(cell);
         firstClick = false;
+        startMillis = millis();
       }
 
       revealCell(cell);
@@ -271,6 +273,8 @@ class Board {
   // flag a cell
   void rightClick(Cell cell) {
     cell.toggleFlagged();
+
+    flags += cell.isFlagged() ? 1 : -1;
   }
 
   void shiftClick(Cell cell) {
@@ -288,10 +292,7 @@ class Board {
       // if equal to adjMines of that cell, reveal adjacent non-flag cells
       if (flaggedCount == cell.adjMines()) {
         for (Cell neighbor : neighbors(cell)) {
-          if (!neighbor.isFlagged() &&
-              !neighbor.isRevealed() &&
-              !gameOver &&
-              !gameWon) {
+          if (!neighbor.isFlagged() && !neighbor.isRevealed()) {
             click(neighbor);
           }
         }
@@ -337,12 +338,15 @@ class Board {
     for (int row = 0; row < boardHeight; row++) {
       for (int col = 0; col < boardWidth; col++) {
         cells[row][col].reset();
-        isShowingMines = false;
-        firstClick     = true;
-        gameOver       = false;
-        gameWon        = false;
       }
     }
+
+    isShowingMines = false;
+    firstClick     = true;
+    gameOver       = false;
+    gameWon        = false;
+    time = 0;
+    flags = 0;
   }
 
   // counts the number of mines in an array of cells
@@ -418,6 +422,11 @@ class Board {
 
   // draw the board, passing mouseX, mouseY, and mousePressed
   void drawBoard(int mx, int my, boolean pressed) {
+    if (!firstClick && gameRunning()) {
+      time = (millis() - startMillis) * 0.001;
+    }
+
+    frame.setTitle("⏰: " + String.format("%.3f", time) + " 💣: " + (mines - flags));
 
     for (int row = 0; row < boardHeight; row++) {
       for (int col = 0; col < boardWidth; col++) {
@@ -425,7 +434,8 @@ class Board {
         cells[row][col].drawCell(row, col, isShowingMines);
 
         if ((int) (my / CELLSIZE) == row &&
-            (int) (mx / CELLSIZE) == col) {
+            (int) (mx / CELLSIZE) == col &&
+            !cells[row][col].isRevealed()) {
 
           // highlight cell under mouse
           fill(255, 50);
