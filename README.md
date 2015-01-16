@@ -14,11 +14,3 @@ Control | Action
 
 ![Screenshot](screenshot.png)
 
-Controls
-========
-
-Control | Action
-------- | ------
-[Left mouse] | Reveal cell
-[Right mouse] | Flag cell
-[Shift] + [Left mouse] | "Chord" click
