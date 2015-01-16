@@ -9,13 +9,17 @@
  * [shift + left click] chord
  */
 
-int GRIDWIDTH  = 20;
-int GRIDHEIGHT = 16;
-int MINES      = 50;
-int CELLSIZE   = 32;  // tied to image sizes, don't change
+int GRIDWIDTH  = 20; // width of board
+int GRIDHEIGHT = 16; // height of board
+int MINECOUNT  = 30; // number of mines to place
+int CELLSIZE   = 32; // tied to image sizes, don't change
 
+// image resources
 PImage imgNormal, imgRevealed, imgMine, imgFlag;
+
+// custom font
 PFont font;
+
 Board board;
 
 void setup() {
@@ -24,7 +28,7 @@ void setup() {
   size(CELLSIZE * GRIDWIDTH, CELLSIZE * GRIDHEIGHT);
 
   // initialize board
-  board = new Board(GRIDWIDTH, GRIDHEIGHT, MINES);
+  board = new Board(GRIDWIDTH, GRIDHEIGHT, MINECOUNT);
 
   // load images & fonts
   imgNormal   = loadImage("cell.png");
@@ -48,21 +52,15 @@ void mouseClicked() {
     if (mouseButton == LEFT) {
       if (keyPressed == true &&
           key        == CODED &&
-          keyCode    == SHIFT) {
-
-        // shift left click
+          keyCode    == SHIFT) { // shift left click
         board.shiftClick(cellUnderMouse());
-      } else {
-
-        // left click
+      } else { // left click
         board.click(cellUnderMouse());
       }
-    } else {
-
-      // right click
+    } else { // right click
       board.rightClick(cellUnderMouse());
     }
-  } else {
+  } else { // game is not running, restart game
     board.newGame();
   }
 }
@@ -75,58 +73,72 @@ Cell cellUnderMouse() {
   return board.cell(row, col);
 }
 
-// displays a message with a background color c
+// displays a message with a background color
 void messageBox(String message, color c) {
+
+  // fill screen with transparent overlay
   fill(c);
   rect(0, 0, width, height);
+
+  // print message in middle of screen
   fill(255);
   text(message, width / 2, height / 2);
 }
 
+// used in Board, contains all information about a specific cell on the board
 class Cell {
-  boolean mine     = false;
-  boolean revealed = false;
-  boolean flagged  = false;
-  int x, y;
-  int adjMines = 0; // number of adjacent mines
+  boolean mine     = false; // is the cell a mine?
+  boolean revealed = false; // is the cell revealed?
+  boolean flagged  = false; // is the cell flagged?
+  int row, col;             // position on board
+  int adjMines = 0;         // number of adjacent mines
 
-  Cell(int x, int y) {
-    this.x = x;
-    this.y = y;
+  Cell(int row, int col) {
+    this.row = row;
+    this.col = col;
   }
 
+  // getter for revealed
   boolean isRevealed() {
     return revealed;
   }
 
+  // getter for flagged
   boolean isFlagged() {
     return flagged;
   }
 
+  // getter for mine
   boolean isMine() {
     return mine;
   }
 
+  // getter for adjMines
   int adjMines() {
     return adjMines;
   }
 
+  // setter that toggles flagged
   void toggleFlagged() {
     flagged = !flagged;
   }
 
+  // setter that reveals cell
   void reveal() {
     revealed = true;
   }
 
+  // setter that makes the cell a mine
   void setMine() {
     mine = true;
   }
 
+  // setter for adjMines
   void setAdjMines(int n) {
     adjMines = n;
   }
 
+  // reset the Cell
   void reset() {
     mine     = false;
     revealed = false;
@@ -134,6 +146,7 @@ class Cell {
     adjMines = 0;
   }
 
+  // array of colors to color number of adjacent cells text based on number
   color[] colors = { color(0   , 0   , 255) ,  // blue
                      color(0   , 200 , 0  ) ,  // green
                      color(255 , 0   , 0  ) ,  // red
@@ -143,7 +156,8 @@ class Cell {
                      color(0   , 0   , 0  ) ,  // black
                      color(75  , 75  , 75 ) }; // gray
 
-  void drawCell(int row, int col, boolean isShowingMines) {
+  // draws the cell on screen
+  void drawCell(boolean isShowingMines) {
     pushMatrix();
     translate(col * CELLSIZE, row * CELLSIZE);
 
@@ -178,15 +192,18 @@ class Cell {
   }
 }
 
+// contains all information for a minesweeper game
 class Board {
-  Cell[][] cells;
-  int boardWidth, boardHeight, mines, flags;
-  boolean firstClick     = true;
-  boolean gameOver       = false;
-  boolean gameWon        = false;
-  boolean isShowingMines = false;
-  int startMillis = 0;
-  float time = 0;
+  Cell[][] cells;      // 2D array of Cells, row-based
+  int boardWidth;      // width of cell grid
+  int boardHeight;     // height of cell grid
+  int mines;           // # of mines on board
+  int flags;           // # of flagged cells
+  int startMillis = 0; // value of millis() at the start of game
+  float time = 0;      // time elapsed since start of game
+  boolean firstClick = true;  // has the user made the first move?
+  boolean gameOver   = false; // is the game over?
+  boolean gameWon    = false; // has the user won?
 
   Board(int boardWidth, int boardHeight, int mines) {
     this.cells       = new Cell[boardHeight][boardWidth];
@@ -194,26 +211,29 @@ class Board {
     this.boardHeight = boardHeight;
     this.mines       = mines;
 
-    // create grid of cells
     for (int row = 0; row < boardHeight; row++) {
       for (int col = 0; col < boardWidth; col++) {
-        cells[row][col] = new Cell(col, row);
+        cells[row][col] = new Cell(row, col);
       }
     }
   }
 
+  // getter for width of cell grid
   int boardWidth() {
     return boardWidth;
   }
 
+  // getter for height of cell grid
   int boardHeight() {
     return boardHeight;
   }
 
+  // returns true if game isn't over
   boolean gameRunning() {
     return !(gameOver || gameWon);
   }
 
+  // returns the cell at row, col
   Cell cell(int row, int col) {
     return cells[row][col];
   }
@@ -242,17 +262,23 @@ class Board {
   void calculateMines() {
     for (int row = 0; row < boardHeight; row++) {
       for (int col = 0; col < boardWidth; col++) {
-        cells[row][col].setAdjMines(countMines(neighbors(cells[row][col])));
+        int adjCount = 0;
+
+        for (Cell cell : neighbors(cells[row][col])) {
+          if (cell.isMine()) {
+            adjCount++;
+          }
+        }
+
+        cells[row][col].setAdjMines(adjCount);
       }
     }
   }
 
-  // reveal a cell if game isn't over, place mines after first click
-  // if game is over, restart game
+  // reveals a cell, places mines if it's the first click
   void click(Cell cell) {
     if (cell.isMine()) {
       gameOver = true;
-      isShowingMines = true;
     } else {
 
       if (firstClick) {
@@ -264,7 +290,6 @@ class Board {
       revealCell(cell);
 
       if (won()) {
-        isShowingMines = true;
         gameWon = true;
       }
     }
@@ -277,6 +302,7 @@ class Board {
     flags += cell.isFlagged() ? 1 : -1;
   }
 
+  // "chord" click a cell
   void shiftClick(Cell cell) {
     if (cell.isRevealed()) {
 
@@ -335,45 +361,38 @@ class Board {
 
   // reset the board
   void newGame() {
+
+    // reset each cell
     for (int row = 0; row < boardHeight; row++) {
       for (int col = 0; col < boardWidth; col++) {
         cells[row][col].reset();
       }
     }
 
-    isShowingMines = false;
-    firstClick     = true;
-    gameOver       = false;
-    gameWon        = false;
+    // reset board variables
+    firstClick = true;
+    gameOver   = false;
+    gameWon    = false;
     time = 0;
     flags = 0;
   }
 
-  // counts the number of mines in an array of cells
-  int countMines(ArrayList<Cell> cells) {
-    int count = 0;
-
-    for (Cell cell : cells) {
-      if (cell.isMine()) {
-        count++;
-      }
-    }
-
-    return count;
-  }
-
+  // array of direction differences for finding 8 adjacent cells
   int[][] directions = {{ -1, -1 }, { -1, 0 }, { -1, 1 },
-                        { 0 , -1 }, { 0 , 1 },
-                        { 1 , -1 }, { 1 , 0 }, { 1 , 1 }};
+                         { 0 , -1 },            { 0 , 1 },
+                         { 1 , -1 }, { 1 , 0 }, { 1 , 1 }};
 
   // return an array of adjacent cells of a given cell
   ArrayList<Cell> neighbors(Cell cell) {
     ArrayList<Cell> result = new ArrayList<Cell>();
 
     for (int[] direction : directions) {
-      int neighborRow = cell.y + direction[1];
-      int neighborCol = cell.x + direction[0];
 
+      // add each direction difference to cell coordinates
+      int neighborRow = cell.row + direction[1];
+      int neighborCol = cell.col + direction[0];
+
+      // check if in bounds
       if (neighborRow >= 0 && neighborRow < boardHeight) {
         if (neighborCol >= 0 && neighborCol < boardWidth) {
           result.add(cells[neighborRow][neighborCol]);
@@ -420,18 +439,24 @@ class Board {
     return zeros;
   }
 
+  String timeEmoji = "\u23F0";
+  String bombEmoji = "\uD83D\uDCA3";
+
   // draw the board, passing mouseX, mouseY, and mousePressed
   void drawBoard(int mx, int my, boolean pressed) {
     if (!firstClick && gameRunning()) {
       time = (millis() - startMillis) * 0.001;
     }
 
-    frame.setTitle("⏰: " + String.format("%.3f", time) + " 💣: " + (mines - flags));
+    // sets the title of the window to reflect time remaining and bombs left 
+    frame.setTitle(timeEmoji + ": " + String.format("%.3f ", time) +
+                   bombEmoji + ": " + (mines - flags));
 
     for (int row = 0; row < boardHeight; row++) {
       for (int col = 0; col < boardWidth; col++) {
-        // draw each cell
-        cells[row][col].drawCell(row, col, isShowingMines);
+
+        // draw each cell, revealing mines if game is over
+        cells[row][col].drawCell(!gameRunning());
 
         if ((int) (my / CELLSIZE) == row &&
             (int) (mx / CELLSIZE) == col &&
@@ -442,10 +467,11 @@ class Board {
 
           if (pressed) {
 
-            // darken if mouse is pressed
+            // darken if mouse pressed
             fill(0, 30);
           }
 
+          // draw highlight/darken overlay
           rect(col * CELLSIZE, row * CELLSIZE, CELLSIZE, CELLSIZE);
         }
       }
