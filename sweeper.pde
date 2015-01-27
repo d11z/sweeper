@@ -346,7 +346,6 @@ class Board {
   // return true if all non-mine cells are revealed
   boolean won() {
 
-    // iterate over each cell on board
     for (int row = 0; row < boardHeight; row++) {
       for (int col = 0; col < boardWidth; col++) {
         if (!cells[row][col].isRevealed() && !cells[row][col].isMine()) {
@@ -557,7 +556,7 @@ class EffectsLayer {
       }
     }
 
-    // swap waves with buffer
+    // swap buffers
     float[][] temp = buffer1;
     buffer1 = buffer2;
     buffer2 = temp;
