@@ -16,7 +16,7 @@ final boolean altImages = true;
 
 final int GRIDWIDTH  = 20; // width of board
 final int GRIDHEIGHT = 14; // height of board
-final int MINECOUNT  = 10; // number of mines to place
+final int MINECOUNT  = 35; // number of mines to place
 
 // pixel dimensions of cells
 final int CELLSIZE = !altImages ? 32 : 24;
