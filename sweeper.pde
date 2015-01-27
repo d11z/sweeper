@@ -9,18 +9,21 @@
  * [shift + left click] chord
  */
 
-int GRIDWIDTH  = 20; // width of board
-int GRIDHEIGHT = 16; // height of board
-int MINECOUNT  = 30; // number of mines to place
-int CELLSIZE   = 32; // tied to image sizes, don't change
-
-// image resources
-PImage imgNormal, imgRevealed, imgMine, imgFlag;
-
-// custom font
-PFont font;
-
 Board board;
+
+// enable alternative images?
+final boolean altImages = true;
+
+final int GRIDWIDTH  = 20; // width of board
+final int GRIDHEIGHT = 14; // height of board
+final int MINECOUNT  = 10; // number of mines to place
+
+// pixel dimensions of cells
+final int CELLSIZE = !altImages ? 32 : 24;
+
+// external resources
+PImage imgNormal, imgRevealed, imgMine, imgFlag;
+PFont font;
 
 void setup() {
 
@@ -31,15 +34,15 @@ void setup() {
   board = new Board(GRIDWIDTH, GRIDHEIGHT, MINECOUNT);
 
   // load images & fonts
-  imgNormal   = loadImage("cell.png");
-  imgRevealed = loadImage("cell_down.png");
-  imgMine     = loadImage("mine.png");
-  imgFlag     = loadImage("flag.png");
-  font        = loadFont("font.vlw");
+  imgNormal   = loadImage(!altImages ? "cell.png"      : "cell_alt.png");
+  imgRevealed = loadImage(!altImages ? "cell_down.png" : "cell_down_alt.png");
+  imgMine     = loadImage(!altImages ? "mine.png"      : "mine_alt.png");
+  imgFlag     = loadImage(!altImages ? "flag.png"      : "flag_alt.png");
+  font        = loadFont("FORCED-SQUARE-20.vlw");
 
   // set drawing options
   textAlign(CENTER, CENTER);
-  textFont(font, 18);
+  textFont(font, 20);
   noStroke();
 }
 
@@ -47,20 +50,34 @@ void draw() {
   board.drawBoard(mouseX, mouseY, mousePressed);
 }
 
+// hooks mouse events into our board
 void mouseClicked() {
   if (board.gameRunning()) {
+    Cell clickedCell = cellUnderMouse();
+
     if (mouseButton == LEFT) {
+
+      // shift left click
       if (keyPressed == true &&
           key        == CODED &&
-          keyCode    == SHIFT) { // shift left click
-        board.shiftClick(cellUnderMouse());
-      } else { // left click
-        board.click(cellUnderMouse());
+          keyCode    == SHIFT) {
+        board.shiftClick(clickedCell);
+
+      // left click
+      } else {
+        board.click(clickedCell);
       }
-    } else { // right click
-      board.rightClick(cellUnderMouse());
+
+    // right click
+    } else {
+      board.rightClick(clickedCell);
     }
-  } else { // game is not running, restart game
+
+    // create ripple
+    board.fx.ripple(clickedCell);
+
+  // game is not running, restart game
+  } else {
     board.newGame();
   }
 }
@@ -93,52 +110,51 @@ class Cell {
   int row, col;             // position on board
   int adjMines = 0;         // number of adjacent mines
 
-  Cell(int row, int col) {
-    this.row = row;
-    this.col = col;
+  Cell(int _row, int _col) {
+    this.row = _row;
+    this.col = _col;
   }
 
-  // getter for revealed
   boolean isRevealed() {
     return revealed;
   }
 
-  // getter for flagged
   boolean isFlagged() {
     return flagged;
   }
 
-  // getter for mine
   boolean isMine() {
     return mine;
   }
 
-  // getter for adjMines
   int adjMines() {
     return adjMines;
   }
 
-  // setter that toggles flagged
+  int row() {
+    return row;
+  }
+
+  int col() {
+    return col;
+  }
+
   void toggleFlagged() {
     flagged = !flagged;
   }
 
-  // setter that reveals cell
   void reveal() {
     revealed = true;
   }
 
-  // setter that makes the cell a mine
   void setMine() {
     mine = true;
   }
 
-  // setter for adjMines
   void setAdjMines(int n) {
     adjMines = n;
   }
 
-  // reset the Cell
   void reset() {
     mine     = false;
     revealed = false;
@@ -157,7 +173,7 @@ class Cell {
                      color(75  , 75  , 75 ) }; // gray
 
   // draws the cell on screen
-  void drawCell(boolean isShowingMines) {
+  void drawCell(boolean showMines) {
     pushMatrix();
     translate(col * CELLSIZE, row * CELLSIZE);
 
@@ -184,7 +200,7 @@ class Cell {
     }
 
     // reveal mines
-    if (isShowingMines && mine) {
+    if (showMines && mine) {
       image(imgMine, 0, 0);
     }
 
@@ -195,6 +211,7 @@ class Cell {
 // contains all information for a minesweeper game
 class Board {
   Cell[][] cells;      // 2D array of Cells, row-based
+  EffectsLayer fx;     // ripple effect
   int boardWidth;      // width of cell grid
   int boardHeight;     // height of cell grid
   int mines;           // # of mines on board
@@ -205,25 +222,25 @@ class Board {
   boolean gameOver   = false; // is the game over?
   boolean gameWon    = false; // has the user won?
 
-  Board(int boardWidth, int boardHeight, int mines) {
-    this.cells       = new Cell[boardHeight][boardWidth];
-    this.boardWidth  = boardWidth;
-    this.boardHeight = boardHeight;
-    this.mines       = mines;
+  Board(int _boardWidth, int _boardHeight, int _mines) {
+    this.cells       = new Cell[_boardHeight][_boardWidth];
+    this.boardWidth  = _boardWidth;
+    this.boardHeight = _boardHeight;
+    this.mines       = _mines;
 
     for (int row = 0; row < boardHeight; row++) {
       for (int col = 0; col < boardWidth; col++) {
         cells[row][col] = new Cell(row, col);
       }
     }
+
+    fx = new EffectsLayer(this);
   }
 
-  // getter for width of cell grid
   int boardWidth() {
     return boardWidth;
   }
 
-  // getter for height of cell grid
   int boardHeight() {
     return boardHeight;
   }
@@ -378,9 +395,9 @@ class Board {
   }
 
   // array of direction differences for finding 8 adjacent cells
-  int[][] directions = {{ -1, -1 }, { -1, 0 }, { -1, 1 },
-                         { 0 , -1 },            { 0 , 1 },
-                         { 1 , -1 }, { 1 , 0 }, { 1 , 1 }};
+  int[][] directions = {{-1 , -1 }, {-1 , 0 }, {-1 , 1 },
+                        { 0 , -1 },            { 0 , 1 },
+                        { 1 , -1 }, { 1 , 0 }, { 1 , 1 }};
 
   // return an array of adjacent cells of a given cell
   ArrayList<Cell> neighbors(Cell cell) {
@@ -389,8 +406,8 @@ class Board {
     for (int[] direction : directions) {
 
       // add each direction difference to cell coordinates
-      int neighborRow = cell.row + direction[1];
-      int neighborCol = cell.col + direction[0];
+      int neighborRow = cell.row() + direction[1];
+      int neighborCol = cell.col() + direction[0];
 
       // check if in bounds
       if (neighborRow >= 0 && neighborRow < boardHeight) {
@@ -439,18 +456,31 @@ class Board {
     return zeros;
   }
 
-  String timeEmoji = "\u23F0";
-  String bombEmoji = "\uD83D\uDCA3";
+  // OS-dependant strings
+  String timeStr, bombStr;
 
   // draw the board, passing mouseX, mouseY, and mousePressed
   void drawBoard(int mx, int my, boolean pressed) {
+
+    // set & format time
     if (!firstClick && gameRunning()) {
       time = (millis() - startMillis) * 0.001;
     }
 
-    // sets the title of the window to reflect time remaining and bombs left 
-    frame.setTitle(timeEmoji + ": " + String.format("%.3f ", time) +
-                   bombEmoji + ": " + (mines - flags));
+    // use emojis in title if mac
+    String OS = System.getProperty("os.name").toLowerCase();
+
+    if (OS.indexOf("mac") >= 0) {
+      timeStr = "\u23F0";
+      bombStr = "\uD83D\uDCA3";
+    } else {
+      timeStr = "Time";
+      bombStr = "Bombs";
+    }
+
+    // sets the title of the window to reflect time remaining and bombs left    
+    frame.setTitle(timeStr + ": " + String.format("%.3f ", time) +
+                   bombStr + ": " + (mines - flags));
 
     for (int row = 0; row < boardHeight; row++) {
       for (int col = 0; col < boardWidth; col++) {
@@ -477,12 +507,71 @@ class Board {
       }
     }
 
+    fx.updateWaves();
+    fx.drawWaves();
+
     if (gameOver) {
       messageBox("Game over!\nClick to start a new game.", color(255, 0, 0, 100));
     }
 
     if (gameWon) {
       messageBox("You win!\nClick to start a new game.", color(50, 100));
+    }
+  }
+}
+
+// creates a ripple/wave effect on the grid
+class EffectsLayer {
+  Board board;
+  float[][] buffer1, buffer2;
+  int w, h;
+
+  EffectsLayer(Board _board) {
+    this.board = _board;
+    w = board.boardWidth();
+    h = board.boardHeight();
+
+    // create 2 2D arrays of values the same size as the Board
+    buffer1 = new float[h][w];
+    buffer2 = new float[h][w];
+  }
+
+  // creates a ripple
+  void ripple(Cell cell) {
+    buffer1[cell.row()][cell.col()] = 20;
+  }
+
+  void updateWaves() {
+    for (int row = 0; row <= h; row++) {
+      for (int col = 0; col <= w; col++) {
+        float x1, x2, y1, y2;
+
+        // sum of 4 adjacent values
+        y1 = (row == 0)     ? 0 : buffer1[row - 1][col];
+        y2 = (row == h + 1) ? 0 : buffer1[row + 1][col];
+        x1 = (col == 0)     ? 0 : buffer1[row][col - 1];
+        x2 = (col == w + 1) ? 0 : buffer1[row][col + 1];
+
+        buffer2[row][col] = (x1 + x2 + y1 + y2) / 2 - buffer2[row][col];
+        buffer1[row][col] += (buffer2[row][col] - buffer1[row][col]) / 4;
+      }
+    }
+
+    // swap waves with buffer
+    float[][] temp = buffer1;
+    buffer1 = buffer2;
+    buffer2 = temp;
+  }
+
+  void drawWaves() {
+    for (int row = 0; row <= h; row++) {
+      for (int col = 0; col <= w; col++) {
+        pushMatrix();
+        translate(col * CELLSIZE, row * CELLSIZE);
+        fill(!altImages ? 255 : 0, buffer1[row][col] * (!altImages ? 50 : 5));
+        rect(0, 0, CELLSIZE, CELLSIZE);
+        popMatrix();
+      }
     }
   }
 }
