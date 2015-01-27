@@ -542,15 +542,15 @@ class EffectsLayer {
   }
 
   void updateWaves() {
-    for (int row = 0; row <= h; row++) {
-      for (int col = 0; col <= w; col++) {
+    for (int row = 0; row < h; row++) {
+      for (int col = 0; col < w; col++) {
         float x1, x2, y1, y2;
 
         // sum of 4 adjacent values
         y1 = (row == 0)     ? 0 : buffer1[row - 1][col];
-        y2 = (row == h + 1) ? 0 : buffer1[row + 1][col];
+        y2 = (row == h - 1) ? 0 : buffer1[row + 1][col];
         x1 = (col == 0)     ? 0 : buffer1[row][col - 1];
-        x2 = (col == w + 1) ? 0 : buffer1[row][col + 1];
+        x2 = (col == w - 1) ? 0 : buffer1[row][col + 1];
 
         buffer2[row][col] = (x1 + x2 + y1 + y2) / 2 - buffer2[row][col];
         buffer1[row][col] += (buffer2[row][col] - buffer1[row][col]) / 4;
@@ -564,11 +564,17 @@ class EffectsLayer {
   }
 
   void drawWaves() {
-    for (int row = 0; row <= h; row++) {
-      for (int col = 0; col <= w; col++) {
+    for (int row = 0; row < h; row++) {
+      for (int col = 0; col < w; col++) {
         pushMatrix();
         translate(col * CELLSIZE, row * CELLSIZE);
-        fill(!altImages ? 255 : 0, buffer1[row][col] * (!altImages ? 50 : 5));
+
+        if (!altImages) {
+          fill(255, buffer1[row][col] * 50);
+        } else {
+          fill(0, buffer1[row][col] * 5);
+        }
+
         rect(0, 0, CELLSIZE, CELLSIZE);
         popMatrix();
       }
