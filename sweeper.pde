@@ -1,34 +1,48 @@
 /*
  * sweeper
  * Deniz Basegmez
- * 12/22/14
+ * 1/29/15
  *
  * a simple minesweeper clone
+ *
  * [left click]         reveal cell
  * [right click]        flag cell
- * [shift + left click] chord
+ * [shift + left click
+ * OR middle click]     chord
  */
 
 Board board;
 
-final boolean ALTIMAGES = true; // enable alternative images?
-final boolean ENABLEFX  = true; // enable ripple effect?
-
+// game options
 final int GRIDWIDTH  = 20; // width of board
 final int GRIDHEIGHT = 14; // height of board
 final int MINECOUNT  = 35; // number of mines to place
-final int RIPPLEAMP  = 10; // ripple effect amplitude
 
-// pixel dimensions of cells
-// 32px default
-// 24px alternative
-final int CELLSIZE = !ALTIMAGES ? 32 : 24;
+// graphics options
+final boolean ALTIMAGES = true; // enable alternative images?
+final boolean ENABLEFX  = true; // enable ripple effect?
+final int RIPPLEAMP     = 10;   // ripple effect amplitude
 
 // game states
 final int NEWGAME  = 0;
 final int RUNNING  = 1;
 final int GAMELOST = 2;
 final int GAMEWON  = 3;
+
+// pixel dimensions of cells
+// 32px default
+// 24px alternative
+final int CELLSIZE = !ALTIMAGES ? 32 : 24;
+
+// array of colors to color number of adjacent cells text based on number
+final color[] COLORS = {color(0   , 0   , 255),  // blue
+                        color(0   , 200 , 0  ),  // green
+                        color(255 , 0   , 0  ),  // red
+                        color(0   , 0   , 150),  // dark blue
+                        color(165 , 40  , 40 ),  // brown
+                        color(0   , 255 , 255),  // cyan
+                        color(0   , 0   , 0  ),  // black
+                        color(75  , 75  , 75 )}; // gray
 
 // external resources
 PImage imgNormal, imgRevealed, imgMine, imgFlag;
@@ -62,7 +76,6 @@ void draw() {
 void mouseClicked() {
   board.hookMouse();
 }
-
 
 // used in Board, contains all information about a specific cell on the board
 class Cell {
@@ -124,16 +137,6 @@ class Cell {
     adjMines = 0;
   }
 
-  // array of colors to color number of adjacent cells text based on number
-  color[] colors = { color(0   , 0   , 255) ,  // blue
-                     color(0   , 200 , 0  ) ,  // green
-                     color(255 , 0   , 0  ) ,  // red
-                     color(0   , 0   , 150) ,  // dark blue
-                     color(165 , 40  , 40 ) ,  // brown
-                     color(0   , 255 , 255) ,  // cyan
-                     color(0   , 0   , 0  ) ,  // black
-                     color(75  , 75  , 75 ) }; // gray
-
   // draws the cell on screen
   void drawCell(boolean showMines) {
     pushMatrix();
@@ -147,7 +150,7 @@ class Cell {
       if (adjMines > 0) {
 
         // set color based on number of mines
-        fill(colors[adjMines - 1]);
+        fill(COLORS[adjMines - 1]);
         text(adjMines, CELLSIZE / 2, CELLSIZE / 2);
       }
     } else {
@@ -491,7 +494,7 @@ class Board {
       bombStr = "Bombs";
     }
 
-    // sets the title of the window to reflect time remaining and bombs left    
+    // sets the title of the window to reflect time remaining and bombs left
     frame.setTitle(timeStr + ": " + String.format("%.3f ", time) +
                    bombStr + ": " + (mines - flags));
 

@@ -10,7 +10,7 @@ Control | Action
 ------- | ------
 [Left mouse] | Reveal cell
 [Right mouse] | Flag cell
-[Shift] + [Left mouse] | "Chord" click
+[Shift] + [Left mouse] OR [Middle mouse] | "Chord" click
 
 ![Screenshot](screenshot.png)
 
