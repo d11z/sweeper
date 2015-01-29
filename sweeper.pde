@@ -56,7 +56,7 @@ void setup() {
 }
 
 void draw() {
-  board.drawBoard(mouseX, mouseY, mousePressed);
+  board.drawBoard();
 }
 
 void mouseClicked() {
@@ -472,8 +472,8 @@ class Board {
   // OS-dependant strings
   String timeStr, bombStr;
 
-  // draw the board, passing mouseX, mouseY, and mousePressed
-  void drawBoard(int mx, int my, boolean pressed) {
+  // draw the board
+  void drawBoard() {
 
     // set & format time
     if (state == RUNNING) {
@@ -501,14 +501,14 @@ class Board {
         // draw each cell, revealing mines if game is over
         cells[row][col].drawCell(state == GAMELOST || state == GAMEWON);
 
-        if ((int) (my / CELLSIZE) == row &&
-            (int) (mx / CELLSIZE) == col &&
+        if (mouseY / CELLSIZE == row &&
+            mouseX / CELLSIZE == col &&
             !cells[row][col].isRevealed()) {
 
           // highlight cell under mouse
           fill(255, 50);
 
-          if (pressed) {
+          if (mousePressed) {
 
             // darken if mouse pressed
             fill(0, 30);
