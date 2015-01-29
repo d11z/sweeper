@@ -11,15 +11,22 @@
 
 Board board;
 
-// enable alternative images?
-final boolean altImages = true;
+final boolean ALTIMAGES = true; // enable alternative images?
+final boolean ENABLEFX  = true; // enable ripple effect?
 
 final int GRIDWIDTH  = 20; // width of board
 final int GRIDHEIGHT = 14; // height of board
 final int MINECOUNT  = 35; // number of mines to place
+final int RIPPLEAMP  = 10; // ripple effect amplitude
 
 // pixel dimensions of cells
-final int CELLSIZE = !altImages ? 32 : 24;
+final int CELLSIZE = !ALTIMAGES ? 32 : 24;
+
+// game states
+final int NEWGAME  = 0;
+final int RUNNING  = 1;
+final int GAMELOST = 2;
+final int GAMEWON  = 3;
 
 // external resources
 PImage imgNormal, imgRevealed, imgMine, imgFlag;
@@ -31,13 +38,13 @@ void setup() {
   size(CELLSIZE * GRIDWIDTH, CELLSIZE * GRIDHEIGHT);
 
   // initialize board
-  board = new Board(GRIDWIDTH, GRIDHEIGHT, MINECOUNT);
+  board = new Board(GRIDWIDTH, GRIDHEIGHT, MINECOUNT, ENABLEFX, RIPPLEAMP);
 
   // load images & fonts
-  imgNormal   = loadImage(!altImages ? "cell.png"      : "cell_alt.png");
-  imgRevealed = loadImage(!altImages ? "cell_down.png" : "cell_down_alt.png");
-  imgMine     = loadImage(!altImages ? "mine.png"      : "mine_alt.png");
-  imgFlag     = loadImage(!altImages ? "flag.png"      : "flag_alt.png");
+  imgNormal   = loadImage(!ALTIMAGES ? "cell.png"      : "cell_alt.png");
+  imgRevealed = loadImage(!ALTIMAGES ? "cell_down.png" : "cell_down_alt.png");
+  imgMine     = loadImage(!ALTIMAGES ? "mine.png"      : "mine_alt.png");
+  imgFlag     = loadImage(!ALTIMAGES ? "flag.png"      : "flag_alt.png");
   font        = loadFont("FORCED-SQUARE-20.vlw");
 
   // set drawing options
@@ -52,7 +59,7 @@ void draw() {
 
 // hooks mouse events into our board
 void mouseClicked() {
-  if (board.gameRunning()) {
+  if (board.state() == NEWGAME || board.state() == RUNNING) {
     Cell clickedCell = cellUnderMouse();
 
     if (mouseButton == LEFT) {
@@ -218,15 +225,19 @@ class Board {
   int flags;           // # of flagged cells
   int startMillis = 0; // value of millis() at the start of game
   float time = 0;      // time elapsed since start of game
-  boolean firstClick = true;  // has the user made the first move?
-  boolean gameOver   = false; // is the game over?
-  boolean gameWon    = false; // has the user won?
+  boolean enableFx;    // ripple effect enabled?
+  int state = NEWGAME; // game state
 
-  Board(int _boardWidth, int _boardHeight, int _mines) {
+  Board(int _boardWidth,
+        int _boardHeight,
+        int _mines,
+        boolean _enableFx,
+        int fxAmplitude) {
     this.cells       = new Cell[_boardHeight][_boardWidth];
     this.boardWidth  = _boardWidth;
     this.boardHeight = _boardHeight;
     this.mines       = _mines;
+    this.enableFx    = _enableFx;
 
     for (int row = 0; row < boardHeight; row++) {
       for (int col = 0; col < boardWidth; col++) {
@@ -234,7 +245,7 @@ class Board {
       }
     }
 
-    fx = new EffectsLayer(this);
+    fx = new EffectsLayer(this, fxAmplitude);
   }
 
   int boardWidth() {
@@ -245,9 +256,8 @@ class Board {
     return boardHeight;
   }
 
-  // returns true if game isn't over
-  boolean gameRunning() {
-    return !(gameOver || gameWon);
+  int state() {
+    return state;
   }
 
   // returns the cell at row, col
@@ -295,19 +305,19 @@ class Board {
   // reveals a cell, places mines if it's the first click
   void click(Cell cell) {
     if (cell.isMine()) {
-      gameOver = true;
+      state = GAMELOST;
     } else {
 
-      if (firstClick) {
+      if (state == NEWGAME) {
         placeMines(cell);
-        firstClick = false;
+        state = RUNNING;
         startMillis = millis();
       }
 
       revealCell(cell);
 
       if (won()) {
-        gameWon = true;
+        state = GAMEWON;
       }
     }
   }
@@ -386,9 +396,7 @@ class Board {
     }
 
     // reset board variables
-    firstClick = true;
-    gameOver   = false;
-    gameWon    = false;
+    state = NEWGAME;
     time = 0;
     flags = 0;
   }
@@ -462,7 +470,7 @@ class Board {
   void drawBoard(int mx, int my, boolean pressed) {
 
     // set & format time
-    if (!firstClick && gameRunning()) {
+    if (state == RUNNING) {
       time = (millis() - startMillis) * 0.001;
     }
 
@@ -485,7 +493,7 @@ class Board {
       for (int col = 0; col < boardWidth; col++) {
 
         // draw each cell, revealing mines if game is over
-        cells[row][col].drawCell(!gameRunning());
+        cells[row][col].drawCell(state == GAMELOST || state == GAMEWON);
 
         if ((int) (my / CELLSIZE) == row &&
             (int) (mx / CELLSIZE) == col &&
@@ -506,14 +514,16 @@ class Board {
       }
     }
 
-    fx.updateWaves();
-    fx.drawWaves();
+    if (enableFx) {
+      fx.updateWaves();
+      fx.drawWaves();
+    }
 
-    if (gameOver) {
+    if (state == GAMELOST) {
       messageBox("Game over!\nClick to start a new game.", color(255, 0, 0, 100));
     }
 
-    if (gameWon) {
+    if (state == GAMEWON) {
       messageBox("You win!\nClick to start a new game.", color(50, 100));
     }
   }
@@ -523,10 +533,11 @@ class Board {
 class EffectsLayer {
   Board board;
   float[][] buffer1, buffer2;
-  int w, h;
+  int w, h, fxAmplitude;
 
-  EffectsLayer(Board _board) {
+  EffectsLayer(Board _board, int _fxAmplitude) {
     this.board = _board;
+    this.fxAmplitude = _fxAmplitude;
     w = board.boardWidth();
     h = board.boardHeight();
 
@@ -537,7 +548,7 @@ class EffectsLayer {
 
   // creates a ripple
   void ripple(Cell cell) {
-    buffer1[cell.row()][cell.col()] = 20;
+    buffer1[cell.row()][cell.col()] = fxAmplitude;
   }
 
   void updateWaves() {
@@ -568,8 +579,11 @@ class EffectsLayer {
         pushMatrix();
         translate(col * CELLSIZE, row * CELLSIZE);
 
-        if (!altImages) {
+        // white + more alpha on default graphics
+        if (!ALTIMAGES) {
           fill(255, buffer1[row][col] * 50);
+
+        // black + less alpha on alt graphics
         } else {
           fill(0, buffer1[row][col] * 5);
         }
