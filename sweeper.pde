@@ -44,6 +44,11 @@ final color[] COLORS = {color(0   , 0   , 255),  // blue
                         color(0   , 0   , 0  ),  // black
                         color(75  , 75  , 75 )}; // gray
 
+// array of direction differences for finding 8 adjacent cells
+final int[][] DIRECTIONS = {{-1 , -1 }, {-1 , 0 }, {-1 , 1 },
+                            { 0 , -1 },            { 0 , 1 },
+                            { 1 , -1 }, { 1 , 0 }, { 1 , 1 }};
+
 // external resources
 PImage imgNormal, imgRevealed, imgMine, imgFlag;
 PFont font;
@@ -398,16 +403,11 @@ class Board {
     flags = 0;
   }
 
-  // array of direction differences for finding 8 adjacent cells
-  int[][] directions = {{-1 , -1 }, {-1 , 0 }, {-1 , 1 },
-                        { 0 , -1 },            { 0 , 1 },
-                        { 1 , -1 }, { 1 , 0 }, { 1 , 1 }};
-
   // return an array of adjacent cells of a given cell
   ArrayList<Cell> neighbors(Cell cell) {
     ArrayList<Cell> result = new ArrayList<Cell>();
 
-    for (int[] direction : directions) {
+    for (int[] direction : DIRECTIONS) {
 
       // add each direction difference to cell coordinates
       int neighborRow = cell.row() + direction[1];
