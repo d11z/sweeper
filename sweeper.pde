@@ -20,6 +20,8 @@ final int MINECOUNT  = 35; // number of mines to place
 final int RIPPLEAMP  = 10; // ripple effect amplitude
 
 // pixel dimensions of cells
+// 32px default
+// 24px alternative
 final int CELLSIZE = !ALTIMAGES ? 32 : 24;
 
 // game states
@@ -57,57 +59,10 @@ void draw() {
   board.drawBoard(mouseX, mouseY, mousePressed);
 }
 
-// hooks mouse events into our board
 void mouseClicked() {
-  if (board.state() == NEWGAME || board.state() == RUNNING) {
-    Cell clickedCell = cellUnderMouse();
-
-    if (mouseButton == LEFT) {
-
-      // shift left click
-      if (keyPressed == true &&
-          key        == CODED &&
-          keyCode    == SHIFT) {
-        board.shiftClick(clickedCell);
-
-      // left click
-      } else {
-        board.click(clickedCell);
-      }
-
-    // right click
-    } else {
-      board.rightClick(clickedCell);
-    }
-
-    // create ripple
-    board.fx.ripple(clickedCell);
-
-  // game is not running, restart game
-  } else {
-    board.newGame();
-  }
+  board.hookMouse();
 }
 
-// converts mouseX & mouseY => col & row and return the cell under the mouse
-Cell cellUnderMouse() {
-  int row = mouseY / CELLSIZE;
-  int col = mouseX / CELLSIZE;
-
-  return board.cell(row, col);
-}
-
-// displays a message with a background color
-void messageBox(String message, color c) {
-
-  // fill screen with transparent overlay
-  fill(c);
-  rect(0, 0, width, height);
-
-  // print message in middle of screen
-  fill(255);
-  text(message, width / 2, height / 2);
-}
 
 // used in Board, contains all information about a specific cell on the board
 class Cell {
@@ -285,6 +240,45 @@ class Board {
     calculateMines();
   }
 
+  // hooks the mouse into Board using Processing mouse variables
+  void hookMouse() {
+    if (state == NEWGAME || state == RUNNING) {
+      int row = mouseY / CELLSIZE;
+      int col = mouseX / CELLSIZE;
+
+      Cell clickedCell = cells[row][col];
+
+      if (mouseButton == LEFT) {
+
+        // shift + left click
+        if (keyPressed == true &&
+            key        == CODED &&
+            keyCode    == SHIFT) {
+          clickChord(clickedCell);
+
+        // left click
+        } else {
+          clickReveal(clickedCell);
+        }
+
+      // middle click
+      } else if (mouseButton == CENTER) {
+        clickChord(clickedCell);
+
+      // right click
+      } else {
+        clickFlag(clickedCell);
+      }
+
+      // create ripple
+      fx.ripple(clickedCell);
+
+    // game is not running, restart game
+    } else {
+      newGame();
+    }
+  }
+
   // calculate and store mine counts of each cell
   void calculateMines() {
     for (int row = 0; row < boardHeight; row++) {
@@ -303,7 +297,7 @@ class Board {
   }
 
   // reveals a cell, places mines if it's the first click
-  void click(Cell cell) {
+  void clickReveal(Cell cell) {
     if (cell.isMine()) {
       state = GAMELOST;
     } else {
@@ -323,14 +317,14 @@ class Board {
   }
 
   // flag a cell
-  void rightClick(Cell cell) {
+  void clickFlag(Cell cell) {
     cell.toggleFlagged();
 
     flags += cell.isFlagged() ? 1 : -1;
   }
 
   // "chord" click a cell
-  void shiftClick(Cell cell) {
+  void clickChord(Cell cell) {
     if (cell.isRevealed()) {
 
       // count how many adjacent flags there are
@@ -346,7 +340,7 @@ class Board {
       if (flaggedCount == cell.adjMines()) {
         for (Cell neighbor : neighbors(cell)) {
           if (!neighbor.isFlagged() && !neighbor.isRevealed()) {
-            click(neighbor);
+            clickReveal(neighbor);
           }
         }
       }
@@ -461,6 +455,18 @@ class Board {
     }
 
     return zeros;
+  }
+
+  // displays a message with a background color
+  void messageBox(String message, color c) {
+
+    // fill screen with transparent overlay
+    fill(c);
+    rect(0, 0, width, height);
+
+    // print message in middle of screen
+    fill(255);
+    text(message, width / 2, height / 2);
   }
 
   // OS-dependant strings
