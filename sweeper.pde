@@ -1,3 +1,5 @@
+/* @pjs font="FORCED-SQUARE.ttf"; */
+
 /*
  * sweeper
  * Deniz Basegmez
@@ -61,12 +63,18 @@ void setup() {
   // initialize board
   board = new Board(GRIDWIDTH, GRIDHEIGHT, MINECOUNT, ENABLEFX, RIPPLEAMP);
 
-  // load images & fonts
+  // load images
   imgNormal   = loadImage(!ALTIMAGES ? "cell.png"      : "cell_alt.png");
   imgRevealed = loadImage(!ALTIMAGES ? "cell_down.png" : "cell_down_alt.png");
   imgMine     = loadImage(!ALTIMAGES ? "mine.png"      : "mine_alt.png");
   imgFlag     = loadImage(!ALTIMAGES ? "flag.png"      : "flag_alt.png");
-  font        = loadFont("FORCED-SQUARE-20.vlw");
+
+  // processing.js font compatibility
+  if (online) {
+    font = createFont("FORCED-SQUARE", 20);
+  } else {
+    font = loadFont("FORCED-SQUARE-20.vlw");
+  }
 
   // set drawing options
   textAlign(CENTER, CENTER);
@@ -107,15 +115,15 @@ class Cell {
     return mine;
   }
 
-  int adjMines() {
+  int getAdjMines() {
     return adjMines;
   }
 
-  int row() {
+  int getRow() {
     return row;
   }
 
-  int col() {
+  int getCol() {
     return col;
   }
 
@@ -123,7 +131,7 @@ class Cell {
     flagged = !flagged;
   }
 
-  void reveal() {
+  void setRevealed() {
     revealed = true;
   }
 
@@ -211,16 +219,12 @@ class Board {
     fx = new EffectsLayer(this, fxAmplitude);
   }
 
-  int boardWidth() {
+  int getWidth() {
     return boardWidth;
   }
 
-  int boardHeight() {
+  int getHeight() {
     return boardHeight;
-  }
-
-  int state() {
-    return state;
   }
 
   // returns the cell at row, col
@@ -251,8 +255,8 @@ class Board {
   // hooks the mouse into Board using Processing mouse variables
   void hookMouse() {
     if (state == NEWGAME || state == RUNNING) {
-      int row = mouseY / CELLSIZE;
-      int col = mouseX / CELLSIZE;
+      int row = (int) (mouseY / CELLSIZE);
+      int col = (int) (mouseX / CELLSIZE);
 
       Cell clickedCell = cells[row][col];
 
@@ -345,7 +349,7 @@ class Board {
       }
 
       // if equal to adjMines of that cell, reveal adjacent non-flag cells
-      if (flaggedCount == cell.adjMines()) {
+      if (flaggedCount == cell.getAdjMines()) {
         for (Cell neighbor : neighbors(cell)) {
           if (!neighbor.isFlagged() && !neighbor.isRevealed()) {
             clickReveal(neighbor);
@@ -374,13 +378,13 @@ class Board {
   // reveal a cell and it's connected zeros
   void revealCell(Cell cell) {
     if (!cell.isRevealed()) {
-      cell.reveal();
+      cell.setRevealed();
 
-      if (cell.adjMines() == 0) {
+      if (cell.getAdjMines() == 0) {
         for (Cell zero : findConnectedZeros(cell)) {
-          zero.reveal();
+          zero.setRevealed();
           for (Cell edge : neighbors(zero)) {
-            edge.reveal();
+            edge.setRevealed();
           }
         }
       }
@@ -410,8 +414,8 @@ class Board {
     for (int[] direction : DIRECTIONS) {
 
       // add each direction difference to cell coordinates
-      int neighborRow = cell.row() + direction[1];
-      int neighborCol = cell.col() + direction[0];
+      int neighborRow = cell.getRow() + direction[1];
+      int neighborCol = cell.getCol() + direction[0];
 
       // check if in bounds
       if (neighborRow >= 0 && neighborRow < boardHeight) {
@@ -447,7 +451,7 @@ class Board {
 
       // for all adjacent zeros of the current cell
       for (Cell neighbor : neighbors(curCell)) {
-        if (neighbor.adjMines() == 0) {
+        if (neighbor.getAdjMines() == 0) {
           if (!zeros.contains(neighbor) && !queue.contains(neighbor)) {
 
             // add each zero to the queue if not already in zeros or queue
@@ -483,20 +487,23 @@ class Board {
       time = (millis() - startMillis) * 0.001;
     }
 
-    // use emojis in title if mac
-    String OS = System.getProperty("os.name").toLowerCase();
+    if (!online) {
 
-    if (OS.indexOf("mac") >= 0) {
-      timeStr = "\u23F0";
-      bombStr = "\uD83D\uDCA3";
-    } else {
-      timeStr = "Time";
-      bombStr = "Bombs";
+      // use emojis in title if mac
+      String OS = System.getProperty("os.name").toLowerCase();
+
+      if (OS.indexOf("mac") >= 0) {
+        timeStr = "\u23F0";
+        bombStr = "\uD83D\uDCA3";
+      } else {
+        timeStr = "Time";
+        bombStr = "Bombs";
+      }
+
+      // sets the title of the window to reflect time remaining and bombs left
+      frame.setTitle(timeStr + ": " + String.format("%.3f ", time) +
+                     bombStr + ": " + (mines - flags));
     }
-
-    // sets the title of the window to reflect time remaining and bombs left
-    frame.setTitle(timeStr + ": " + String.format("%.3f ", time) +
-                   bombStr + ": " + (mines - flags));
 
     for (int row = 0; row < boardHeight; row++) {
       for (int col = 0; col < boardWidth; col++) {
@@ -504,8 +511,8 @@ class Board {
         // draw each cell, revealing mines if game is over
         cells[row][col].drawCell(state == GAMELOST || state == GAMEWON);
 
-        if (mouseY / CELLSIZE == row &&
-            mouseX / CELLSIZE == col &&
+        if ((int) (mouseY / CELLSIZE) == row &&
+            (int) (mouseX / CELLSIZE) == col &&
             !cells[row][col].isRevealed()) {
 
           // highlight cell under mouse
@@ -547,8 +554,8 @@ class EffectsLayer {
   EffectsLayer(Board _board, int _fxAmplitude) {
     this.board = _board;
     this.fxAmplitude = _fxAmplitude;
-    w = board.boardWidth();
-    h = board.boardHeight();
+    w = board.getWidth();
+    h = board.getHeight();
 
     // create 2 2D arrays of values the same size as the Board
     buffer1 = new float[h][w];
@@ -557,7 +564,7 @@ class EffectsLayer {
 
   // creates a ripple
   void ripple(Cell cell) {
-    buffer1[cell.row()][cell.col()] = fxAmplitude;
+    buffer1[cell.getRow()][cell.getCol()] = fxAmplitude;
   }
 
   void updateWaves() {
